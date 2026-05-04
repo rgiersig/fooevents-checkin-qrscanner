@@ -20,7 +20,7 @@ class Assets
 
     public static function enqueue_admin(string $hook_suffix): void
     {
-        if ($hook_suffix !== 'fooevents_page_fooevents-qr-checkin') {
+        if (substr($hook_suffix, -strlen('_page_fooevents-qr-checkin')) !== '_page_fooevents-qr-checkin') {
             return;
         }
 
@@ -42,7 +42,7 @@ class Assets
 
     private static function enqueue(): void
     {
-        wp_enqueue_style('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.css', [], '0.1.1');
-        wp_enqueue_script('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.js', [], '0.1.1', true);
+        wp_enqueue_style('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.css', [], '0.1.2');
+        wp_enqueue_script('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.js', [], '0.1.2', true);
     }
 }

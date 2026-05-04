@@ -65,6 +65,7 @@ class Plugin
         nocache_headers();
 
         $config = Admin_Page::build_frontend_config();
+        $standalone = true;
         require dirname(__DIR__) . '/templates/scanner-page.php';
         exit;
     }

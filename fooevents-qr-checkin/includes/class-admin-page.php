@@ -53,6 +53,7 @@ class Admin_Page
         }
 
         $config = self::build_frontend_config();
+        $standalone = false;
         require dirname(__DIR__) . '/templates/scanner-page.php';
     }
 
@@ -64,6 +65,7 @@ class Admin_Page
 
         ob_start();
         $config = self::build_frontend_config();
+        $standalone = false;
         require dirname(__DIR__) . '/templates/scanner-page.php';
 
         return (string) ob_get_clean();
