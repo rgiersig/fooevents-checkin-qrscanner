@@ -1,0 +1,10 @@
+{
+  "name": "FooEvents QR Check-In",
+  "short_name": "QR Check-In",
+  "start_url": "/fooevents-checkin-qrscanner/",
+  "scope": "/fooevents-checkin-qrscanner/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d2327",
+  "icons": []
+}

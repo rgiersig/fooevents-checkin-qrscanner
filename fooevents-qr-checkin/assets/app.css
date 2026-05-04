@@ -1,0 +1,5 @@
+body{font-family:Arial,sans-serif;margin:0;padding:16px;background:#f6f7f8}
+.feqc-wrap{max-width:760px;margin:0 auto;background:#fff;border-radius:10px;padding:16px}
+#feqc-video{width:100%;max-height:320px;background:#111;border-radius:8px}
+.feqc-row{margin-top:12px;display:flex;gap:8px;align-items:center}
+.feqc-success-1,.feqc-success-2{background:#b6f5c8!important}
