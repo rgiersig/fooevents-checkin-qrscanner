@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: FooEvents QR Check-In
- * Description: QR-Scanner als PWA für FooEvents Check-In/Check-Out.
- * Version: 0.1.2
- * Author: FooEvents QR Team
+ * Description: QR-Scanner als PWA fuer FooEvents Check-In/Check-Out. Benoetigt FooEvents for WooCommerce.
+ * Version: 0.1.5
+ * Author: 4future QR Scanner development team
  * Text Domain: fooevents-qr-checkin
  */
 
