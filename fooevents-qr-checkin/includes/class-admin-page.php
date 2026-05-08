@@ -16,7 +16,7 @@ class Admin_Page
 
     public static function register_menu(): void
     {
-        $capability = 'publish_event_magic_tickets';
+        $capability = self::menu_capability();
         $parent_slug = self::has_menu_slug('fooevents') ? 'fooevents' : 'tools.php';
 
         add_submenu_page(
@@ -48,10 +48,11 @@ class Admin_Page
 
     public static function render_admin_page(): void
     {
-        if (! current_user_can('publish_event_magic_tickets')) {
+        if (! self::can_access_scanner()) {
             wp_die(esc_html__('Keine Berechtigung.', 'fooevents-qr-checkin'));
         }
 
+        Assets::enqueue_app();
         $config = self::build_frontend_config();
         $standalone = false;
         require dirname(__DIR__) . '/templates/scanner-page.php';
@@ -59,16 +60,35 @@ class Admin_Page
 
     public static function render_shortcode(): string
     {
-        if (! is_user_logged_in() || ! current_user_can('publish_event_magic_tickets')) {
+        if (! is_user_logged_in() || ! self::can_access_scanner()) {
             return '<p>' . esc_html__('Bitte einloggen.', 'fooevents-qr-checkin') . '</p>';
         }
 
         ob_start();
+        Assets::enqueue_app();
         $config = self::build_frontend_config();
         $standalone = false;
         require dirname(__DIR__) . '/templates/scanner-page.php';
 
         return (string) ob_get_clean();
+    }
+
+    public static function can_access_scanner(): bool
+    {
+        return current_user_can('publish_event_magic_tickets')
+            || current_user_can('manage_woocommerce')
+            || current_user_can('manage_options');
+    }
+
+    private static function menu_capability(): string
+    {
+        foreach (['publish_event_magic_tickets', 'manage_woocommerce', 'manage_options'] as $capability) {
+            if (current_user_can($capability)) {
+                return $capability;
+            }
+        }
+
+        return 'manage_options';
     }
 
     public static function build_frontend_config(): array

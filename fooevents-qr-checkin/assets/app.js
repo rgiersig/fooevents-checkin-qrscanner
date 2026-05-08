@@ -5,6 +5,7 @@
     noCamera: 'Keine Kamera verfuegbar',
     cameraDenied: 'Kamerazugriff verweigert',
     scannerUnsupported: 'QR-Erkennung nicht verfuegbar. Ticket-ID manuell eingeben.',
+    scannerReady: 'QR-Code scannen oder Ticket-ID manuell eingeben.',
     invalidTicketId: 'Ungueltige Ticket-ID',
     ticketNotFound: 'Kein Ticket gefunden.',
     genericError: 'Unerwarteter Fehler',
@@ -17,6 +18,9 @@
     busy: false,
     stream: null,
     detector: null,
+    canvas: null,
+    canvasContext: null,
+    scanMode: '',
     scanTimer: null,
     lastValue: ''
   };
@@ -171,28 +175,53 @@
       return;
     }
 
-    if (!('BarcodeDetector' in window)) {
-      setStatus(i18n.scannerUnsupported);
+    if ('BarcodeDetector' in window) {
+      try {
+        state.detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        state.scanMode = 'native';
+        state.scanTimer = window.setInterval(scanFrame, 350);
+        setStatus(i18n.scannerReady);
+        return;
+      } catch (err) {
+        log(err);
+      }
+    }
+
+    if (typeof window.jsQR === 'function') {
+      state.canvas = document.createElement('canvas');
+      state.canvasContext = state.canvas.getContext('2d', { willReadFrequently: true });
+      state.scanMode = 'jsqr';
+      state.scanTimer = window.setInterval(scanFrame, 350);
+      setStatus(i18n.scannerReady);
       return;
     }
 
-    try {
-      state.detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-      state.scanTimer = window.setInterval(scanFrame, 350);
-      setStatus('');
-    } catch (err) {
-      log(err);
-      setStatus(i18n.scannerUnsupported);
-    }
+    setStatus(i18n.scannerUnsupported);
   }
 
   async function scanFrame() {
     const video = document.getElementById('feqc-video');
-    if (!state.detector || !video || state.busy || video.readyState < 2) return;
+    if (!video || state.busy || video.readyState < 2) return;
 
     try {
-      const codes = await state.detector.detect(video);
-      const value = codes[0]?.rawValue || '';
+      let value = '';
+
+      if (state.scanMode === 'native' && state.detector) {
+        const codes = await state.detector.detect(video);
+        value = codes[0]?.rawValue || '';
+      } else if (state.scanMode === 'jsqr' && state.canvas && state.canvasContext) {
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+        if (!width || !height) return;
+
+        state.canvas.width = width;
+        state.canvas.height = height;
+        state.canvasContext.drawImage(video, 0, 0, width, height);
+        const imageData = state.canvasContext.getImageData(0, 0, width, height);
+        const code = window.jsQR(imageData.data, imageData.width, imageData.height);
+        value = code?.data || '';
+      }
+
       const ticketId = normalizeTicketId(value);
       if (!ticketId || ticketId === state.lastValue) return;
 

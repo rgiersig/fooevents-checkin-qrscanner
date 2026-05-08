@@ -100,13 +100,18 @@ class Plugin
             return;
         }
 
-        if (! is_user_logged_in() || ! current_user_can('publish_event_magic_tickets')) {
+        if (! is_user_logged_in()) {
             auth_redirect();
+        }
+
+        if (! Admin_Page::can_access_scanner()) {
+            wp_die(esc_html__('Keine Berechtigung.', 'fooevents-qr-checkin'));
         }
 
         status_header(200);
         nocache_headers();
 
+        Assets::enqueue_app();
         $config = Admin_Page::build_frontend_config();
         $standalone = true;
         require dirname(__DIR__) . '/templates/scanner-page.php';

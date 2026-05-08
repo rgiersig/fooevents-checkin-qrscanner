@@ -24,25 +24,26 @@ class Assets
             return;
         }
 
-        self::enqueue();
+        self::enqueue_app();
     }
 
     public static function enqueue_frontend(): void
     {
         if ((int) get_query_var('fooevents_qr_scanner') === 1) {
-            self::enqueue();
+            self::enqueue_app();
             return;
         }
 
         global $post;
         if ($post && has_shortcode((string) $post->post_content, 'fooevents_checkin_qrscanner')) {
-            self::enqueue();
+            self::enqueue_app();
         }
     }
 
-    private static function enqueue(): void
+    public static function enqueue_app(): void
     {
-        wp_enqueue_style('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.css', [], '0.1.2');
-        wp_enqueue_script('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.js', [], '0.1.2', true);
+        wp_enqueue_style('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.css', [], '0.1.8');
+        wp_enqueue_script('fooevents-qr-checkin-jsqr', self::$plugin_url . 'assets/vendor/jsQR.js', [], '1.4.0', true);
+        wp_enqueue_script('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.js', ['fooevents-qr-checkin-jsqr'], '0.1.8', true);
     }
 }
