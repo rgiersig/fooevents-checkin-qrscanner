@@ -1,5 +1,252 @@
-body{font-family:Arial,sans-serif;margin:0;padding:16px;background:#f6f7f8}
-.feqc-wrap{max-width:760px;margin:0 auto;background:#fff;border-radius:10px;padding:16px}
-#feqc-video{width:100%;max-height:320px;background:#111;border-radius:8px}
-.feqc-row{margin-top:12px;display:flex;gap:8px;align-items:center}
-.feqc-success-1,.feqc-success-2{background:#b6f5c8!important}
+#fooevents-express-check-in-wrapper {
+  margin-right: 1em;
+  padding: 4em 0 0;
+}
+
+.fooevents-express-check-in-container {
+  padding: 3em;
+  margin: auto;
+  text-align: center;
+}
+
+.fooevents-express-check-in-container h1 {
+  margin-bottom: 1.5em;
+  font-size: 2.5em;
+}
+
+.fooevents-qr-checkin-camera {
+  width: 500px;
+  max-width: 100%;
+  margin: 0 auto 1.5em;
+}
+
+#fooevents-qr-checkin-video {
+  width: 100%;
+  max-height: 320px;
+  background: #111;
+  border-radius: 4px;
+}
+
+#fooevents-qr-checkin-status {
+  min-height: 1.4em;
+  margin: .6em 0 0;
+}
+
+.fooevents-express-check-in-notickets {
+  text-align: center;
+}
+
+th.fooevents-express-check-in-status-column {
+  text-align: right;
+}
+
+.fooevents-express-check-in-status {
+  display: block;
+  float: right;
+  padding: .3em 1.5em .3em .5em;
+  border-radius: 3px;
+  white-space: nowrap;
+  color: #555;
+  background: #f0f3f3;
+}
+
+.fooevents-express-check-in-status-checked-in {
+  color: #fff;
+  padding: .3em 1.5em .3em .5em;
+  background: #26a34d !important;
+}
+
+.fooevents-express-check-in-status-not-checked-in {
+  color: #555;
+  background: #f0f3f3;
+  padding: .3em .5em;
+}
+
+.fooevents-express-check-in-status-unpaid,
+.fooevents-express-check-in-status-canceled {
+  color: #fff;
+  padding: .3em 1.5em .3em .5em;
+  background: #d02525 !important;
+}
+
+.fooevents-express-check-in-button-td {
+  text-align: right;
+}
+
+.fooevents-express-check-in-actions-group {
+  display: none;
+}
+
+.fooevents-express-check-in-actions-group .button {
+  margin-top: .5em;
+}
+
+.fooevents-express-check-in-mobile {
+  display: none;
+}
+
+.fooevents-express-check-in-button-group {
+  width: 220px;
+}
+
+.fooevents-express-check-in-search-field-group {
+  margin-bottom: 1em;
+}
+
+.fooevents-express-check-in-search-field-group span {
+  display: inline-block;
+  background: #f9f9f9;
+  border: solid 1px #eee;
+  border-radius: 5px;
+  padding: 1.1em 1.5em;
+  margin-bottom: .3em;
+}
+
+.fooevents-express-check-in-search-field-group span.fooevents-express-check-in-primary {
+  padding: 1.5em;
+}
+
+.fooevents-express-check-in-search-fields {
+  width: 500px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.fooevents-express-check-in-message-error,
+.fooevents-express-check-in-message-success {
+  border: 0;
+  color: #fff;
+  border-radius: 5px;
+  padding: 1em;
+  text-align: center;
+}
+
+.fooevents-express-check-in-message-error a,
+.fooevents-express-check-in-message-success a {
+  color: #fff;
+}
+
+.fooevents-express-check-in-message-error {
+  background: #d02525;
+}
+
+.fooevents-express-check-in-message-success {
+  background: #26a34d;
+}
+
+#fooevents-express-check-in-value {
+  width: 100%;
+  padding: 1em;
+  margin: 2em 0 1em;
+}
+
+#fooevents-express-check-submit {
+  width: 100%;
+  padding: .6em;
+}
+
+.notice {
+  margin-bottom: 1em;
+}
+
+#fooevents-express-check-in-message-wrapper {
+  position: absolute;
+  top: 1em;
+  left: 0;
+  right: 0;
+}
+
+#fooevents-express-check-in-message-wrapper div {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+@media screen and (max-width: 784px) {
+  .fooevents-express-check-in-container h1 {
+    line-height: 1.2em;
+  }
+
+  #fooevents-express-check-in-wrapper thead {
+    display: none;
+  }
+
+  #fooevents-express-check-in-wrapper .fooevents-express-check-in-button-td {
+    text-align: left;
+  }
+
+  #fooevents-express-check-in-wrapper td {
+    width: 100%;
+    display: block;
+    padding-top: .2em;
+    padding-bottom: 0;
+  }
+
+  #fooevents-express-check-in-wrapper td .row-title {
+    margin-top: 1em;
+    display: block;
+    font-size: 1.4em !important;
+  }
+
+  .fooevents-express-check-in-status {
+    float: left;
+    padding-top: .8em;
+    padding-bottom: .8em;
+    margin: 1em 0;
+  }
+
+  .fooevents-express-check-in-mobile {
+    display: inline;
+    font-weight: bold;
+  }
+
+  #fooevents-express-check-in-message-wrapper {
+    top: 3em;
+    right: 1em;
+  }
+
+  #fooevents-express-check-in-wrapper td.fooevents-express-check-in-button-td {
+    border-bottom: solid 1px #eee;
+    padding-bottom: 1em;
+  }
+
+  .fooevents-express-check-in-search-field-group span {
+    padding: .8em 1.5em;
+  }
+}
+
+@media screen and (max-width: 440px) {
+  .fooevents-express-check-in-container h1 {
+    text-align: left;
+    padding: .5em 0;
+    margin: 0;
+  }
+
+  .fooevents-express-check-in-container {
+    padding: 0;
+    margin: 0;
+  }
+
+  #fooevents-express-check-in-wrapper {
+    padding-top: 0;
+    margin-top: 0;
+  }
+
+  #fooevents-express-check-in-value,
+  #fooevents-express-check-submit {
+    padding: .2em 1em;
+    margin-top: 0;
+  }
+
+  .fooevents-express-check-in-search-field-group span,
+  .fooevents-express-check-in-search-field-group span.fooevents-express-check-in-primary {
+    background-color: transparent;
+    padding: 0 0 1em !important;
+    border: 0;
+    border-radius: 0;
+    margin: 0 !important;
+    display: block;
+    text-align: left;
+  }
+}

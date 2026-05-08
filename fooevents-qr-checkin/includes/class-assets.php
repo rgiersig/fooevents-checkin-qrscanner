@@ -15,7 +15,6 @@ class Assets
         self::$plugin_url = plugin_dir_url($plugin_file);
 
         add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_admin']);
-        add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_frontend']);
     }
 
     public static function enqueue_admin(string $hook_suffix): void
@@ -27,23 +26,27 @@ class Assets
         self::enqueue_app();
     }
 
-    public static function enqueue_frontend(): void
-    {
-        if ((int) get_query_var('fooevents_qr_scanner') === 1) {
-            self::enqueue_app();
-            return;
-        }
-
-        global $post;
-        if ($post && has_shortcode((string) $post->post_content, 'fooevents_checkin_qrscanner')) {
-            self::enqueue_app();
-        }
-    }
-
     public static function enqueue_app(): void
     {
-        wp_enqueue_style('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.css', [], '0.1.8');
+        wp_enqueue_style('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.css', [], '0.2.0');
         wp_enqueue_script('fooevents-qr-checkin-jsqr', self::$plugin_url . 'assets/vendor/jsQR.js', [], '1.4.0', true);
-        wp_enqueue_script('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.js', ['fooevents-qr-checkin-jsqr'], '0.1.8', true);
+        wp_enqueue_script('fooevents-qr-checkin-app', self::$plugin_url . 'assets/app.js', ['jquery', 'fooevents-qr-checkin-jsqr'], '0.2.0', true);
+        wp_localize_script('fooevents-qr-checkin-app', 'FooEventsExpressObj', [
+            'successTicketText' => __('SUCCESS: Ticket', 'fooevents-express-check-in'),
+            'hasBeenUpdatedText' => __(' has been updated.', 'fooevents-express-check-in'),
+            'soundsURL' => self::express_sounds_url(),
+            'soundsEnable' => get_option('globalWooCommerceEventsExpressSounds'),
+        ]);
+    }
+
+    private static function express_sounds_url(): string
+    {
+        $express_plugin_file = WP_PLUGIN_DIR . '/fooevents_express_check_in/fooevents-express-check_in.php';
+
+        if (file_exists($express_plugin_file)) {
+            return plugins_url('sounds/', $express_plugin_file);
+        }
+
+        return self::$plugin_url . 'assets/';
     }
 }

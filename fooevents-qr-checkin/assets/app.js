@@ -1,259 +1,352 @@
-(function () {
-  const App = window.FooEventsQrScanner || {};
-  const DEBUG = !!App.debug;
-  const i18n = {
-    noCamera: 'Keine Kamera verfuegbar',
-    cameraDenied: 'Kamerazugriff verweigert',
-    scannerUnsupported: 'QR-Erkennung nicht verfuegbar. Ticket-ID manuell eingeben.',
-    scannerReady: 'QR-Code scannen oder Ticket-ID manuell eingeben.',
-    invalidTicketId: 'Ungueltige Ticket-ID',
-    ticketNotFound: 'Kein Ticket gefunden.',
-    genericError: 'Unerwarteter Fehler',
-    cancel: 'Abbrechen',
-    checkIn: 'Einchecken',
-    checkOut: 'Auschecken'
-  };
+(function ($) {
+  var multiday = false;
+  var day = 1;
+  var nonceVal = $('input[name=fooevents-express-check-in-search-nonce]').val();
+  var inputTimer;
+  var finishTypingTime = 800;
+  var $input = $('#fooevents-express-check-in-value');
 
-  const state = {
-    busy: false,
-    stream: null,
-    detector: null,
-    canvas: null,
-    canvasContext: null,
-    scanMode: '',
-    scanTimer: null,
-    lastValue: ''
-  };
+  $('#fooevents-express-check-in-search').change(function () {
+    fooevents_express_check_in_search_check();
+  });
 
-  function log(...args) {
-    if (DEBUG) console.debug('[fooevents-qr-checkin]', ...args);
+  setTimeout(function () {
+    $input.focus();
+  }, 0);
+
+  fooevents_express_check_in_search_check();
+
+  if ($('#fooevents-express-check-in-day').length) {
+    multiday = true;
+    day = $('#fooevents-express-check-in-day').val();
+
+    $('#fooevents-express-check-in-day').on('change', function () {
+      day = $('#fooevents-express-check-in-day').val();
+    });
   }
+
+  $input.on('keyup', function () {
+    clearTimeout(inputTimer);
+    if ($('#fooevents-express-check-in-search').is(':checked')) {
+      inputTimer = setTimeout(fooevents_express_check_in_search, finishTypingTime, $input.val(), multiday, day, nonceVal);
+    }
+  });
+
+  $input.on('keydown', function () {
+    clearTimeout(inputTimer);
+  });
+
+  $('#fooevents-express-check-in-search-form').on('submit', function () {
+    fooevents_express_check_in_search($input.val(), multiday, day, nonceVal);
+    return false;
+  });
+
+  $('#fooevents-express-check-submit').on('click', function () {
+    fooevents_express_check_in_search($input.val(), multiday, day, nonceVal);
+    return false;
+  });
+
+  $('.fooevents-express-check-in-checkbox-option').on('change', function () {
+    setTimeout(function () {
+      $input.focus();
+    }, 0);
+  });
+
+  $('#fooevents-express-check-in-output').delegate('.fooevents-express-check-in-control', 'click', function () {
+    fooevents_express_check_in_change_status($(this).attr('id'), multiday, day, nonceVal);
+    setTimeout(function () {
+      $input.focus();
+    }, 0);
+  });
+
+  $('#fooevents-express-check-in-message-wrapper').delegate('.fooevents-express-check-in-undo', 'click', function () {
+    var data = {
+      action: 'undo_check_in',
+      value: $(this).attr('id'),
+      multiday: multiday,
+      day: day,
+      'fooevents-express-check-in-search-nonce': nonceVal
+    };
+
+    $.post(ajaxurl, data, function (response) {
+      var obj = $.parseJSON(response);
+
+      if (obj.status === 'success') {
+        $('<div class="notice notice-success is-dismissible fooevents-express-check-in-message-success fooevents-express-check-in-message-' + obj.status + '"><p>' + obj.status_message + '</p></div>')
+          .appendTo('#fooevents-express-check-in-message-wrapper')
+          .delay(6000)
+          .fadeOut('slow');
+      }
+    });
+
+    return false;
+  });
+
+  $('#fooevents-express-check-in-output').delegate('.fooevents-express-check-in-show-actions', 'click', function () {
+    $(this).closest('tr').find('.fooevents-express-check-in-actions-group').toggle();
+  });
+
+  bootQrScanner(function (ticketValue) {
+    $input.val(ticketValue);
+
+    if ($('#fooevents-express-check-in-search').is(':checked')) {
+      fooevents_express_check_in_search(ticketValue, multiday, day, nonceVal);
+      return;
+    }
+
+    $input.focus();
+  });
+})(jQuery);
+
+function fooevents_express_check_in_search_check() {
+  if (!jQuery('#fooevents-express-check-in-search').length) {
+    return false;
+  }
+
+  if (jQuery('#fooevents-express-check-in-search').is(':checked')) {
+    jQuery('#fooevents-express-check-submit').prop('disabled', true);
+    return true;
+  }
+
+  jQuery('#fooevents-express-check-submit').prop('disabled', false);
+  return false;
+}
+
+function fooevents_express_check_in_search(value, multiday, day, nonceVal) {
+  jQuery('#fooevents-express-check-in-value').prop('disabled', true);
+  jQuery('#fooevents-express-check-in-value').addClass('fooevents-express-check-in-loading');
+  jQuery('#fooevents-express-check-in-output').html('');
+
+  var data = {
+    action: 'fooevents_perform_search',
+    value: value,
+    multiday: multiday,
+    'fooevents-express-check-in-search-nonce': nonceVal,
+    day: day
+  };
+
+  jQuery.post(ajaxurl, data, function (response) {
+    jQuery('#fooevents-express-check-in-output').html(response);
+  });
+
+  if (jQuery('#fooevents-express-check-in-auto-check-in').is(':checked')) {
+    fooevents_express_check_in_change_status_auto_complete(value, multiday, day, nonceVal);
+  }
+
+  jQuery('#fooevents-express-check-in-value').focus(function () {
+    jQuery(this).select();
+  });
+
+  jQuery('#fooevents-express-check-in-value').val('');
+  setTimeout(function () {
+    jQuery('#fooevents-express-check-in-value').focus();
+  }, 0);
+
+  jQuery('#fooevents-express-check-in-value').removeClass('fooevents-express-check-in-loading');
+  jQuery('#fooevents-express-check-in-value').prop('disabled', false);
+}
+
+function fooevents_express_check_in_change_status(controlId, multiday, day, nonceVal) {
+  var data = {
+    action: 'change_ticket_status',
+    value: controlId,
+    multiday: multiday,
+    day: day,
+    'fooevents-express-check-in-search-nonce': nonceVal
+  };
+
+  jQuery.post(ajaxurl, data, function (response) {
+    var enableSounds = jQuery('#fooevents-express-check-in-enable-sounds').is(':checked');
+    var obj = jQuery.parseJSON(response);
+
+    if (obj.status === 'success') {
+      if (enableSounds) {
+        new Audio(FooEventsExpressObj.soundsURL + 'fooevents-success.mp3').play();
+      }
+
+      if (obj.message === 'Checked In') {
+        jQuery('#' + obj.ID).removeClass('button-primary');
+        jQuery('#fooevents-express-check-in-status-' + obj.ticket).removeClass('fooevents-express-check-in-status-not-checked-in fooevents-express-check-in-status-canceled').addClass('fooevents-express-check-in-status-checked-in');
+      }
+
+      if (obj.message === 'Not Checked In') {
+        jQuery('#fooevents-express-check-in-confirm-' + obj.ticket).addClass('button-primary');
+        jQuery('#fooevents-express-check-in-status-' + obj.ticket).removeClass('fooevents-express-check-in-status-checked-in fooevents-express-check-in-status-canceled').addClass('fooevents-express-check-in-status-not-checked-in');
+      }
+
+      if (obj.message === 'Canceled') {
+        jQuery('#fooevents-express-check-in-confirm-' + obj.ticket).addClass('button-primary');
+        jQuery('#fooevents-express-check-in-status-' + obj.ticket).removeClass('fooevents-express-check-in-status-checked-in fooevents-express-check-in-status-canceled').addClass('fooevents-express-check-in-status-canceled');
+      }
+
+      jQuery('#fooevents-express-check-in-status-' + obj.ticket).html(obj.message);
+      jQuery('<div class="notice notice-success is-dismissible fooevents-express-check-in-message-success fooevents-express-check-in-message-' + obj.status + '"><p>' + FooEventsExpressObj.successTicketText + ' #' + obj.ticketID + FooEventsExpressObj.hasBeenUpdatedText + '</p></div>')
+        .appendTo('#fooevents-express-check-in-message-wrapper')
+        .delay(6000)
+        .fadeOut('slow');
+      return;
+    }
+
+    if (enableSounds) {
+      new Audio(FooEventsExpressObj.soundsURL + 'fooevents-error.mp3').play();
+    }
+
+    jQuery('<div class="notice notice-error is-dismissible fooevents-express-check-in-message-error fooevents-express-check-in-message-' + obj.status + '"><p>' + obj.status_message + '</p></div>')
+      .appendTo('#fooevents-express-check-in-message-wrapper')
+      .delay(6000)
+      .fadeOut('slow');
+  });
+}
+
+function fooevents_express_check_in_change_status_auto_complete(value, multiday, day, nonceVal) {
+  var data = {
+    action: 'change_ticket_status_auto_complete',
+    value: value,
+    multiday: multiday,
+    day: day,
+    'fooevents-express-check-in-search-nonce': nonceVal
+  };
+
+  jQuery.post(ajaxurl, data, function (response) {
+    var enableSounds = jQuery('#fooevents-express-check-in-enable-sounds').is(':checked');
+    var obj = jQuery.parseJSON(response);
+
+    if (obj.status === 'success') {
+      if (enableSounds) {
+        new Audio(FooEventsExpressObj.soundsURL + 'fooevents-success.mp3').play();
+      }
+
+      jQuery('<div class="notice notice-success is-dismissible fooevents-express-check-in-message-success fooevents-express-check-in-message-' + obj.status + '"><p>' + obj.status_message + '</p></div>')
+        .appendTo('#fooevents-express-check-in-message-wrapper')
+        .delay(6000)
+        .fadeOut('slow');
+      jQuery('#fooevents-express-check-in-confirm-' + obj.ticket).removeClass('button-primary');
+      jQuery('#fooevents-express-check-in-status-' + obj.ticket).html(obj.message);
+      return;
+    }
+
+    if (enableSounds) {
+      new Audio(FooEventsExpressObj.soundsURL + 'fooevents-error.mp3').play();
+    }
+
+    jQuery('<div class="notice notice-error is-dismissible fooevents-express-check-in-message-error fooevents-express-check-in-message-' + obj.status + '"><p>' + obj.status_message + '</p></div>')
+      .appendTo('#fooevents-express-check-in-message-wrapper')
+      .delay(6000)
+      .fadeOut('slow');
+  });
+}
+
+function bootQrScanner(onDetected) {
+  var video = document.getElementById('fooevents-qr-checkin-video');
+  var status = document.getElementById('fooevents-qr-checkin-status');
+  var detector = null;
+  var canvas = null;
+  var context = null;
+  var mode = '';
+  var busy = false;
+  var lastValue = '';
 
   function setStatus(message) {
-    const status = document.getElementById('feqc-status');
-    if (status) status.textContent = message || '';
-  }
-
-  async function postForm(params) {
-    const body = new URLSearchParams(params);
-    const response = await fetch(App.ajaxUrl, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-      body: body.toString()
-    });
-    return response.text();
-  }
-
-  function parseTicketHtml(html) {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    if (doc.querySelector('.fooevents-express-check-in-notickets')) {
-      return { success: false, error_code: 'ticket_not_found', message: i18n.ticketNotFound };
-    }
-
-    const row = doc.querySelector('table tbody tr');
-    if (!row) return { success: false, error_code: 'invalid_response', message: i18n.genericError };
-
-    const cols = row.querySelectorAll('td');
-    const ticketNumber = (cols[0]?.textContent || '').replace('#', '').trim();
-    const orderId = (cols[1]?.textContent || '').trim();
-    const purchaser = (cols[2]?.textContent || '').trim();
-    const attendee = (cols[3]?.textContent || '').trim();
-    const variations = (cols[5]?.textContent || '').trim();
-    const event = row.querySelector('.fooevents-express-check-in-event-name')?.textContent?.trim() || '';
-    const date = row.querySelector('.fooevents-express-check-in-event-date')?.textContent?.trim() || '';
-    const checkin_status = row.querySelector('.fooevents-express-check-in-status')?.textContent?.trim() || '';
-    const confirmBtn = row.querySelector('[id^="fooevents-express-check-in-confirm-"]');
-    const attendee_post_id = confirmBtn ? confirmBtn.id.split('-').pop() : '';
-
-    return {
-      success: true,
-      ticket: { ticket_number: ticketNumber, attendee_post_id, order_id: orderId, purchaser, attendee, event, variations, date, checkin_status }
-    };
-  }
-
-  async function validateTicket(ticketId, day) {
-    const html = await postForm({
-      action: 'fooevents_perform_search',
-      value: ticketId,
-      multiday: 'true',
-      day,
-      'fooevents-express-check-in-search-nonce': App.nonce
-    });
-    log('validation response', html);
-    return parseTicketHtml(html);
-  }
-
-  async function changeStatus(mode, attendeeId, day) {
-    const value = `fooevents-express-check-in-${mode}-${attendeeId}`;
-    const raw = await postForm({
-      action: 'change_ticket_status',
-      value,
-      multiday: 'true',
-      day,
-      'fooevents-express-check-in-search-nonce': App.nonce
-    });
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return { status: 'error', message: raw };
+    if (status) {
+      status.textContent = message;
     }
   }
 
-  function showError(message) {
-    window.alert(message || i18n.genericError);
+  function normalizeTicketValue(rawValue) {
+    var value = String(rawValue || '').trim();
+    var match = value.match(/\d{12}/);
+    return match ? match[0] : value;
   }
 
-  function flashSuccess() {
-    document.body.classList.add('feqc-success-1');
-    setTimeout(() => document.body.classList.remove('feqc-success-1'), 180);
-    setTimeout(() => document.body.classList.add('feqc-success-2'), 260);
-    setTimeout(() => document.body.classList.remove('feqc-success-2'), 420);
-  }
+  function handleValue(rawValue) {
+    var value = normalizeTicketValue(rawValue);
 
-  function normalizeTicketId(value) {
-    const match = String(value || '').match(/\d{12}/);
-    return match ? match[0] : '';
-  }
-
-  async function processTicket(rawTicketId) {
-    const ticketId = normalizeTicketId(rawTicketId);
-    const day = document.getElementById('feqc-day')?.value || App.defaultDay || 1;
-
-    if (!new RegExp(App.ticketPattern).test(ticketId)) {
-      showError(i18n.invalidTicketId);
+    if (!value || value === lastValue || busy) {
       return;
     }
 
-    state.busy = true;
-    setStatus(ticketId);
+    busy = true;
+    lastValue = value;
+    setStatus('QR erkannt: ' + value);
+    onDetected(value);
+
+    setTimeout(function () {
+      busy = false;
+      lastValue = '';
+    }, 2000);
+  }
+
+  async function scanFrame() {
+    if (!video || video.readyState < 2 || busy) {
+      return;
+    }
 
     try {
-      const result = await validateTicket(ticketId, day);
-      if (!result.success) {
-        showError(result.message);
+      if (mode === 'native' && detector) {
+        var codes = await detector.detect(video);
+        handleValue(codes[0] && codes[0].rawValue);
         return;
       }
 
-      const doCheckin = (result.ticket.checkin_status || '').toLowerCase().includes('not checked');
-      const ok = window.confirm(`${result.ticket.event}\n${result.ticket.ticket_number}\n${doCheckin ? i18n.checkIn : i18n.checkOut}?`);
-      if (!ok) return;
+      if (mode === 'jsqr' && canvas && context) {
+        var width = video.videoWidth;
+        var height = video.videoHeight;
 
-      const mode = doCheckin ? 'confirm' : 'cancel';
-      const statusResult = await changeStatus(mode, result.ticket.attendee_post_id, day);
-      if (statusResult.status === 'success') {
-        flashSuccess();
-        return;
+        if (!width || !height) {
+          return;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        context.drawImage(video, 0, 0, width, height);
+        var imageData = context.getImageData(0, 0, width, height);
+        var code = window.jsQR(imageData.data, imageData.width, imageData.height);
+        handleValue(code && code.data);
       }
-
-      showError(statusResult.message || i18n.genericError);
     } catch (err) {
-      log(err);
-      showError(i18n.genericError);
-    } finally {
-      state.busy = false;
-      setTimeout(() => {
-        state.lastValue = '';
-      }, 1500);
+      if (window.console) {
+        console.debug('[fooevents-qr-checkin]', err);
+      }
     }
   }
 
-  async function bootCamera() {
-    const video = document.getElementById('feqc-video');
-    if (!video || !navigator.mediaDevices?.getUserMedia) {
-      setStatus(i18n.noCamera);
+  async function start() {
+    if (!video || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus('Keine Kamera verfuegbar.');
       return;
     }
 
     try {
-      state.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-      video.srcObject = state.stream;
+      video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
       await video.play();
     } catch (err) {
-      log(err);
-      setStatus(i18n.cameraDenied);
+      setStatus('Kamerazugriff verweigert oder nicht verfuegbar.');
       return;
     }
 
     if ('BarcodeDetector' in window) {
       try {
-        state.detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-        state.scanMode = 'native';
-        state.scanTimer = window.setInterval(scanFrame, 350);
-        setStatus(i18n.scannerReady);
-        return;
+        detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        mode = 'native';
       } catch (err) {
-        log(err);
+        mode = '';
       }
     }
 
-    if (typeof window.jsQR === 'function') {
-      state.canvas = document.createElement('canvas');
-      state.canvasContext = state.canvas.getContext('2d', { willReadFrequently: true });
-      state.scanMode = 'jsqr';
-      state.scanTimer = window.setInterval(scanFrame, 350);
-      setStatus(i18n.scannerReady);
+    if (!mode && typeof window.jsQR === 'function') {
+      canvas = document.createElement('canvas');
+      context = canvas.getContext('2d', { willReadFrequently: true });
+      mode = 'jsqr';
+    }
+
+    if (!mode) {
+      setStatus('QR-Erkennung nicht verfuegbar. Ticket-ID manuell eingeben.');
       return;
     }
 
-    setStatus(i18n.scannerUnsupported);
+    setStatus('QR-Code scannen oder Ticket-ID manuell eingeben.');
+    window.setInterval(scanFrame, 350);
   }
 
-  async function scanFrame() {
-    const video = document.getElementById('feqc-video');
-    if (!video || state.busy || video.readyState < 2) return;
-
-    try {
-      let value = '';
-
-      if (state.scanMode === 'native' && state.detector) {
-        const codes = await state.detector.detect(video);
-        value = codes[0]?.rawValue || '';
-      } else if (state.scanMode === 'jsqr' && state.canvas && state.canvasContext) {
-        const width = video.videoWidth;
-        const height = video.videoHeight;
-        if (!width || !height) return;
-
-        state.canvas.width = width;
-        state.canvas.height = height;
-        state.canvasContext.drawImage(video, 0, 0, width, height);
-        const imageData = state.canvasContext.getImageData(0, 0, width, height);
-        const code = window.jsQR(imageData.data, imageData.width, imageData.height);
-        value = code?.data || '';
-      }
-
-      const ticketId = normalizeTicketId(value);
-      if (!ticketId || ticketId === state.lastValue) return;
-
-      state.lastValue = ticketId;
-      await processTicket(ticketId);
-    } catch (err) {
-      log(err);
-    }
-  }
-
-  function bindTestInput() {
-    const form = document.getElementById('feqc-test-form');
-    if (!form) return;
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (state.busy) return;
-
-      const ticketId = document.getElementById('feqc-ticket-input').value.trim();
-      await processTicket(ticketId);
-    });
-  }
-
-  function registerSW() {
-    if ('serviceWorker' in navigator && App.swUrl) {
-      navigator.serviceWorker.register(App.swUrl).catch(log);
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', async () => {
-    bindTestInput();
-    await bootCamera();
-    registerSW();
-  });
-})();
+  start();
+}

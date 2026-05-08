@@ -10,97 +10,62 @@ class Admin_Page
 {
     public static function init(): void
     {
-        add_action('admin_menu', [__CLASS__, 'register_menu'], 99);
-        add_shortcode('fooevents_checkin_qrscanner', [__CLASS__, 'render_shortcode']);
+        add_action('admin_menu', [__CLASS__, 'add_menu_item']);
     }
 
-    public static function register_menu(): void
+    public static function add_menu_item(): void
     {
-        $capability = self::menu_capability();
-        $parent_slug = self::has_menu_slug('fooevents') ? 'fooevents' : 'tools.php';
-
-        add_submenu_page(
-            $parent_slug,
-            'QR Check-In',
-            'QR Check-In',
-            $capability,
-            'fooevents-qr-checkin',
-            [__CLASS__, 'render_admin_page']
-        );
+        if (current_user_can('publish_event_magic_tickets')) {
+            add_submenu_page(
+                'fooevents',
+                __('QR Check-in', 'fooevents-qr-checkin'),
+                __('QR Check-in', 'fooevents-qr-checkin'),
+                'edit_posts',
+                'fooevents-qr-checkin',
+                [__CLASS__, 'display_page']
+            );
+        }
     }
 
-    private static function has_menu_slug(string $slug): bool
+    public static function display_page(): void
     {
-        global $menu;
-
-        if (! is_array($menu)) {
-            return false;
+        if (! Plugin::is_express_check_in_available()) {
+            echo '<div class="wrap"><h1>QR Check-in</h1><div class="notice notice-error"><p>';
+            echo esc_html__('FooEvents QR Check-In benoetigt ein aktives FooEvents Express Check-in Plugin.', 'fooevents-qr-checkin');
+            echo '</p></div></div>';
+            return;
         }
 
-        foreach ($menu as $item) {
-            if (($item[2] ?? '') === $slug) {
-                return true;
-            }
+        $multiday_options = self::build_multiday_options();
+
+        require dirname(__DIR__) . '/templates/qr-check-in.php';
+    }
+
+    private static function build_multiday_options(): string
+    {
+        self::load_plugin_helpers();
+
+        if (
+            function_exists('is_plugin_active')
+            && function_exists('is_plugin_active_for_network')
+            && class_exists('Fooevents_Multiday_Events')
+            && (
+                is_plugin_active('fooevents_multi_day/fooevents-multi-day.php')
+                || is_plugin_active_for_network('fooevents_multi_day/fooevents-multi-day.php')
+            )
+        ) {
+            $fooevents_multiday_events = new \Fooevents_Multiday_Events();
+
+            return '<span>' . $fooevents_multiday_events->display_multiday_express_check_in_options() . '</span>';
         }
 
-        return false;
+        return '';
     }
 
-    public static function render_admin_page(): void
+    private static function load_plugin_helpers(): void
     {
-        if (! self::can_access_scanner()) {
-            wp_die(esc_html__('Keine Berechtigung.', 'fooevents-qr-checkin'));
+        if (! function_exists('is_plugin_active') || ! function_exists('is_plugin_active_for_network')) {
+            require_once ABSPATH . '/wp-admin/includes/plugin.php';
         }
-
-        Assets::enqueue_app();
-        $config = self::build_frontend_config();
-        $standalone = false;
-        require dirname(__DIR__) . '/templates/scanner-page.php';
-    }
-
-    public static function render_shortcode(): string
-    {
-        if (! is_user_logged_in() || ! self::can_access_scanner()) {
-            return '<p>' . esc_html__('Bitte einloggen.', 'fooevents-qr-checkin') . '</p>';
-        }
-
-        ob_start();
-        Assets::enqueue_app();
-        $config = self::build_frontend_config();
-        $standalone = false;
-        require dirname(__DIR__) . '/templates/scanner-page.php';
-
-        return (string) ob_get_clean();
-    }
-
-    public static function can_access_scanner(): bool
-    {
-        return current_user_can('publish_event_magic_tickets')
-            || current_user_can('manage_woocommerce')
-            || current_user_can('manage_options');
-    }
-
-    private static function menu_capability(): string
-    {
-        foreach (['publish_event_magic_tickets', 'manage_woocommerce', 'manage_options'] as $capability) {
-            if (current_user_can($capability)) {
-                return $capability;
-            }
-        }
-
-        return 'manage_options';
-    }
-
-    public static function build_frontend_config(): array
-    {
-        return [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('fooevents-express-check-in-search'),
-            'defaultDay' => 1,
-            'ticketPattern' => '^\\d{12}$',
-            'debug' => false,
-            'swUrl' => home_url('/fooevents-checkin-qrscanner-sw.js'),
-            'manifestUrl' => home_url('/fooevents-checkin-qrscanner-manifest.webmanifest'),
-        ];
     }
 }
